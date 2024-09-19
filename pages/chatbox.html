@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbox</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://unpkg.com/simple-peer@latest/simplepeer.min.js"></script>
+    <style>
+ .video-container {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #f4f4f4;
+            border-bottom: 1px solid #e1e1e1;
+        }
+
+        .video-section {
+            width: 48%;
+            position: relative;
+        }
+
+        .video-section video {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            background-color: #000;
+        }
+
+
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 600px;
+            margin: 0 auto;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background-color: #007bff;
+            color: #fff;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e1e1e1;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .back-button {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .chat-list {
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex: 1;
+            background-color: #fff;
+            padding: 16px;
+        }
+
+        .chat-message {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .chat-message .profile-pic {
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+        }
+
+        .chat-message .message-content {
+            max-width: 70%;
+            background-color: #f1f1f1;
+            padding: 10px;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .chat-message .message-content.sent {
+            background-color: #007bff;
+            color: #fff;
+            margin-left: auto;
+        }
+
+        .chat-message .message-content .message-text {
+            margin: 0;
+        }
+
+        .chat-message .message-content .message-options {
+            position: absolute;
+            bottom: -20px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .chat-message .message-content .message-options button {
+            background: none;
+            border: none;
+            color: #007bff;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .message-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .message-info .sender-name {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .footer {
+            background-color: #007bff;
+            color: #fff;
+            padding: 16px;
+            border-top: 1px solid #e1e1e1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .footer input[type="text"] {
+            width: calc(100% - 120px);
+            padding: 10px;
+            border: none;
+            border-radius: 20px;
+            margin-right: 10px;
+        }
+
+        .footer button {
+            background-color: #fff;
+            border: 1px solid #007bff;
+            border-radius: 20px;
+            padding: 10px 20px;
+            color: #007bff;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .footer .icon {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+      
+        <div class="video-container" id="vdeo">
+            <!-- User's own video section -->
+            <div class="video-section" id="user-video">
+                <video id="localVideo" autoplay muted></video> <!-- User's video (muted to avoid feedback) -->
+            </div>
+            <!-- Other participant's video section -->
+            <div class="video-section" id="other-video">
+                <video id="remoteVideo" autoplay></video> <!-- Other participant's video -->
+            </div>
+        </div>
+
+
+
+        <div class="header">
+            <button class="back-button" onclick="window.history.back()">Back</button>
+            <h1>Chatbox</h1>
+        </div>
+        <div class="chat-list" id="chats">
+            <div class="chat-message">
+                <img src="https://via.placeholder.com/40" class="profile-pic" alt="Profile Picture">
+                <div class="message-content">
+                    <div class="message-info">
+                        <span class="sender-name">Alice</span>
+                        <span class="timestamp">10:30 AM</span>
+                    </div>
+                    <p class="message-text">Hello! How are you?</p>
+                    <div class="message-options">
+                        <!-- <button onclick="sendPicture()">📸</button>
+                        <button onclick="makeCall()">📞</button> -->
+                    </div>
+                </div>
+            </div>
+            <div class="chat-message sent">
+                <div class="message-content">
+                    <div class="message-info">
+                        <span class="sender-name">You</span>
+                        <span class="timestamp">10:32 AM</span>
+                    </div>
+                    <p class="message-text">I'm good, thanks! How about you?</p>
+                    
+                </div>
+                <img src="https://via.placeholder.com/40" class="profile-pic" alt="Profile Picture">
+            </div>
+            <!-- More chat messages can be added here -->
+        </div>
+        <div class="footer">
+            <input type="text" id="txt" placeholder="Type a message...">
+            <button id="send">Send</button>
+            <button class="icon" onclick="sendPicture()">📸</button>
+            <button class="icon" onclick="makeCall()">📞</button>
+        </div>
+    </div>
+    <button id="btn">onclick</button>
+
+    <script>
+ let client={};
+        let videocalling=false;
+        if(videocalling==false){
+            const videoconteiner=document.getElementById('vdeo');
+            videoconteiner.style.display='none';
+
+        }
+
+        const socket = io('http://localhost:3000');
+//          let cookieValue 
+function initpeer(type,stream){
+            console.log("iniciating");
+            if(type!=='init'){
+                const videoconteiner=document.getElementById('vdeo');
+                videoconteiner.style.display='block';
+
+            }
+            
+                    let peer=new SimplePeer({initiator:(type=='init')?true:false,stream:stream,trickle:false});
+                    peer.on('stream',function(stream){
+                        document.getElementById('remoteVideo').srcObject=stream;
+                        document.getElementById('remoteVideo').play();
+                        console.log("streaming");
+                        
+                    })
+
+                    peer.on('data', function (data) {
+                let decodedData = new TextDecoder('utf-8').decode(data)
+                let peervideo = document.querySelector('#peerVideo')
+                peervideo.style.filter = decodedData
+            })
+            return peer;
+                }
+// let allCookies = document.cookie; 
+
+// // Split the cookies into an array
+// let cookiesArray = allCookies.split('; ');
+
+// // Find a specific cookie by its name
+// let cookieName = 'phoneNo'; // Replace with your cookie name
+// let yourCookie = cookiesArray.find(cookie => cookie.startsWith(cookieName + '='));
+
+// // Extract the cookie value
+// if (yourCookie) {
+//     cookieValue = yourCookie.split('=')[1];
+//     console.log('Cookie Value:', cookieValue);
+// } else {
+//     console.log('Cookie not found!');
+// }
+
+
+// function getCookie(name) {
+//     // Split the cookie string into individual cookies
+//     const cookies = document.cookie.split('; ');
+
+//     // Iterate over each cookie
+//     for (let cookie of cookies) {
+//         // Split the cookie into name and value
+//         const [cookieName, cookieValue] = cookie.split('=');
+
+//         // Check if the current cookie name matches the desired name
+//         if (cookieName === name) {
+//             // Return the value of the cookie
+//             return cookieValue;
+//         }
+//     }
+
+//     // If the cookie was not found, return null
+//     return null;
+// }
+
+// // Usage Example
+// const name = getCookie('phoneNo');
+// console.log(name); // "JohnDoe" (if the cookie "name" exists)
+
+async function getphoneno() {
+    try {
+        const response = await fetch('/getcookies');
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json(); // Parse the response as JSON
+        console.log(data);
+        return data.phoneNo; // Return the phoneNo value
+    } catch (error) {
+        console.error('Failed to fetch phone number:', error);
+        return null; // Handle the error case
+    }
+}
+const x=getphoneno();
+// console.log(getphoneno().data);
+
+
+// console.log(x);
+// const getphone=()=>{
+//     return getphoneno()
+//         .then((data) => {
+//             console.log(data);
+            
+//             return data; // Return the resolved value
+//         })
+//         .catch((error) => {
+//             console.log("error");
+//         });
+// }
+
+
+
+
+
+    socket.on("msg",(msg)=>{
+        console.log(msg);
+const html=`
+        <div class="chat-message sent">
+                <div class="message-content">
+                    <div class="message-info">
+                        <span class="sender-name">${msg.sender}</span>
+                        <span class="timestamp">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <p class="message-text">${msg.txt}</p>
+                    
+                </div>
+                <img src="https://via.placeholder.com/40" class="profile-pic" alt="Profile Picture">
+            </div>`
+
+
+            const chat=document.createElement('div');
+            chat.id='chat';
+            chat.innerHTML=html;
+            document.getElementById('chats').appendChild(chat);
+
+
+
+        console.log(msg.txt);
+    
+    })
+
+
+console.log(getQueryParameter('phone'));
+
+
+
+
+        // const socket=io.connect('http://localhost:3000');
+        // console.log(getphoneno());
+        
+        getphoneno().then((phone2) => {
+    socket.emit('cnt', { phone1: getQueryParameter('phone'), phone2 });
+}).catch((error) => {
+    console.log("Error:", error);
+});
+
+        document.getElementById('btn').addEventListener('click',()=>{
+            console.log(getQueryParameter('phone'));
+            
+
+        })
+
+    function getQueryParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+
+//         document.getElementById('send').addEventListener('click',()=>{
+//             const message=document.getElementById('txt');
+//             // socket.emit("message",{msg:message.value,phone1:getQueryParameter('phone'),phone2:getphone()});
+        
+
+//             getphoneno().then((phone2) => {
+//                 socket.emit("message",{msg:message.value,phone1:getQueryParameter('phone'),phone2:phone2});
+    
+// }).catch((error) => {
+//     console.log("Error:", error);
+// });
+
+//             const html=`
+//         <div class="chat-message sent">
+//                 <div class="message-content">
+//                     <div class="message-info">
+//                         <span class="sender-name">You</span>
+//                         <span class="timestamp">10:32 AM</span>
+//                     </div>
+//                     <p class="message-text">${message.value}</p>
+                    
+//                 </div>
+//                 <img src="https://via.placeholder.com/40" class="profile-pic" alt="Profile Picture">
+//             </div>`
+
+//             const chat=document.createElement('div');
+//             chat.id='chat';
+//             chat.innerHTML=html;
+//             document.getElementById('chats').appendChild(chat);
+            
+
+
+
+//             message.value='';
+
+//         })
+
+
+const loadchats = async () => {
+    try {
+        const phone2 = await getphoneno();
+        console.log("phone 2:", phone2);
+
+
+        
+       const phone1= getQueryParameter('phone');
+       console.log("phone1",phone1);
+       
+       const roomno=Number(phone1)+Number(phone2);// Wait for getphoneno to resolve
+        const response = await fetch(`/getchathistory/${roomno}`); // Use fetch to get chat history
+        const val = await response.json(); // Assuming the response is JSON
+        // Process the chat history here, for example:
+        console.log(val);
+        console.log(typeof(val));
+        for(let i=0;i<val.length;i++){
+            const chat = val[i];
+
+            const html=`
+        <div class="chat-message sent">
+                <div class="message-content">
+                    <div class="message-info">
+                        <span class="sender-name">${val[i].username}</span>
+                        <span class="timestamp">${val[i].timestamp}</span>
+                    </div>
+                    <p class="message-text">${val[i].message}</p>
+                    
+                </div>
+                <img src="https://via.placeholder.com/40" class="profile-pic" alt="Profile Picture">
+            </div>`
+
+
+            const chat1=document.createElement('div');
+            chat1.id='chat';
+            chat1.innerHTML=html;
+            document.getElementById('chats').appendChild(chat1);
+
+
+
+        }
+    } catch (err) {
+        console.error(err); // Handle errors
+    }
+};
+loadchats();
+
+
+
+
+        document.getElementById('send').addEventListener('click', () => {
+    const messageElement = document.getElementById('txt');
+    const messageValue = messageElement.value.trim(); // Get the trimmed value of the input field
+
+    if (messageValue) { // Check if the message is not empty
+        getphoneno().then((phone2) => {
+            socket.emit("message", {
+                msg: messageValue,
+                phone1: getQueryParameter('phone'),
+                phone2: phone2
+            });
+
+            // Append the message to the chat
+            const html = `
+                <div class="chat-message sent">
+                    <div class="message-content">
+                        <div class="message-info">
+                            <span class="sender-name">You</span>
+                            <span class="timestamp">${new Date().toLocaleTimeString()}</span>
+                        </div>
+                        <p class="message-text">${messageValue}</p>
+                    </div>
+                    <img src="https://via.placeholder.com/40" class="profile-pic" alt="Profile Picture">
+                </div>`;
+            
+            const chat = document.createElement('div');
+            chat.id = 'chat';
+            chat.innerHTML = html;
+            document.getElementById('chats').appendChild(chat);
+
+            messageElement.value = ''; // Clear the input field
+        }).catch((error) => {
+            console.log("Error:", error);
+        });
+    } else {
+        console.log("Message is empty.");
+    }
+});
+
+
+        // socket.on('msg',(data)=>{
+        //     console.log(data);
+            
+        // })
+        
+        
+
+        // Get the phone number from the URL
+        const phone = getQueryParameter('phone');
+        console.log("Phone number in chatbox:", phone);
+
+        function sendMessage() {
+
+            alert('Send message functionality');
+            // Implement send message functionality here
+        }
+
+        function sendPicture() {
+            alert('Send picture functionality');
+            // Implement send picture functionality here
+        }
+
+        function makeCall() {
+            client.gotanswer=false;
+            
+
+            const videoconteiner=document.getElementById('vdeo');
+            videoconteiner.style.display='block';
+
+
+            navigator.mediaDevices.getUserMedia({video:true,audio:true}).then((stream)=>{
+              
+                document.getElementById('localVideo').srcObject=stream;
+                const vdeo=document.getElementById('localVideo');
+                vdeo.play();
+                
+
+                
+                let peer=initpeer('init',stream);
+              peer.on('signal',function(data){
+                if(!client.gotanswer){
+                        socket.emit('offer',data);
+                    }
+                   
+
+              })
+              client.peer=peer;
+                   
+                    
+                    
+
+                    
+                
+
+
+
+
+
+                // function makepeer(){
+                //     client.gotanswer=false;
+                //   
+                //     peer.on('signal',function(data){
+                //         if(!client.gotanswer){
+                //             socket.emit('offer',data);
+                //         }
+                //     })
+
+                //     client.peer=peer;
+                // }
+
+
+
+                
+            }
+                
+
+            ).catch((err)=>{
+                console.log("error in videocalling ",err);
+            })
+           
+           
+            // Implement make call functionality here
+        }
+
+function frontanswer(offer){
+     const videoconteiner=document.getElementById('vdeo');
+            videoconteiner.style.display='block';
+
+    console.log("frontanswer ");
+    alert("video call coming");
+    navigator.mediaDevices.getUserMedia({video:true,audio:true}).then((stream)=>{
+        // const vdo=document.getElementById('vdeo');
+        const vdo=document.querySelectorAll('video')[0];
+        console.log(vdo);
+        
+        document.getElementById('vdeo').srcObject=stream;
+        vdo.play();
+      
+    
+        document.getElementById('vdeo').play
+     let peer=initpeer("notinit",stream);
+    peer.on('signal',function(data){
+    socket.emit('answer',data);
+    });
+    peer.signal(offer);
+    client.peer=peer;
+    })
+    
+    
+
+}
+function signalanswer(answer){
+    client.gotanswer=true;
+    let peer=client.peer;
+    peer.signal(answer);
+
+}
+
+
+socket.on("backoffer",frontanswer);
+socket.on("backanswer",signalanswer);
+
+
+    </script>
+</body>
+</html>

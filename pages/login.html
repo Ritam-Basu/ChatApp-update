@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page</title>
+    <style>
+        /* Basic styling for the page */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Styling for the login container */
+        .login-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+
+        /* Styling for the input fields */
+        input[type="tel"], input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        /* Styling for the submit button */
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Change button color on hover */
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        /* Styling for the form title */
+        h2 {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Login</h2>
+        <form id="login-form">
+            <label for="phone" >Phone Number:</label>
+            <input type="tel" id="phone" name="phone" placeholder="Enter your phone number" required>
+            <input type="submit" value="Login">
+        </form>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        // JavaScript to handle form submission
+        document.getElementById('login-form').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            const phone = document.getElementById('phone').value;
+            console.log('Phone Number:', phone);
+            // Perform further processing, like sending the phone number to the server
+            try{
+                const ans=axios.post('/loginpage', {phone: phone});
+                window.location.href='/chatface'
+
+
+            }catch(err){
+                console.error(err);
+            }
+
+        });
+    </script>
+</body>
+</html>
